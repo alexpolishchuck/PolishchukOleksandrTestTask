@@ -1,0 +1,13 @@
+<Project>
+  <PropertyGroup>
+    <VcpkgRoot>C:\vcpkg\</VcpkgRoot>
+    <VcpkgEnabled>true</VcpkgEnabled>
+    <VcpkgEnableManifest>true</VcpkgEnableManifest>
+    <VcpkgManifestInstall>true</VcpkgManifestInstall>
+    <VcpkgManifestRoot>$(MSBuildProjectDirectory)\</VcpkgManifestRoot>
+	<VcpkgManifestInstalledBaseDir>$(MSBuildThisFileDirectory)vcpkg_installed\</VcpkgManifestInstalledBaseDir>
+	<VcpkgInstalledDir>$(VcpkgManifestRoot)vcpkg_installed\</VcpkgInstalledDir>
+  </PropertyGroup>
+
+  <Import Project="$(VcpkgRoot)scripts\buildsystems\msbuild\vcpkg.props" />
+</Project>
