@@ -99,3 +99,12 @@ The client verifies the server certificate. Ensure that OpenSSL has access to a 
 
 **`config.json` cannot be opened**  
 Check the supplied path and the application's current working directory. In Visual Studio, this can be adjusted under **Project Properties → Debugging → Working Directory**.
+
+## Known Limitations and Future Improvements
+Currently, requests are executed sequentially, which is sufficient to meet the application's requirements but does not provide the best user experience.
+
+I implemented asynchronous client-server communication using C++20 coroutines, keeping in mind the possibility of developing a more responsive UI with additional features, such as cancelling active requests. This would be more difficult to achieve with synchronous network operations.
+
+The current implementation also lacks unit and integration tests, as well as proper file logging. Introducing these would improve code quality, simplify debugging, and make testing new features faster and more reliable.
+
+Finally, improving the responsiveness and usability of the UI would be another valuable enhancement.
