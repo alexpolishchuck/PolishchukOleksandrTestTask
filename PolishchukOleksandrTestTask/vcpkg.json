@@ -25,10 +25,6 @@
       "name": "boost-json",
       "version": "1.92.0#0"
     },
-    {
-      "name": "boost-log",
-      "version": "1.92.0#0"
-    },
 	{
 	  "name": "boost-url",
 	  "version": "1.92.0#0"
@@ -40,10 +36,6 @@
     {
       "name": "openssl",
       "version": "3.6.3#0"
-    },
-    {
-      "name": "gtest",
-      "version": "1.18.0#0"
     }
   ]
 }

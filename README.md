@@ -21,14 +21,14 @@ The client uses the following libraries:
 | `boost-uuid` | Generating event UUIDs |
 | `openssl` | TLS/HTTPS support |
 
-The project has been developed against **Boost 1.92.0**. If the manifest uses vcpkg version overrides (for example `1.92.0#0`), keep them in `vcpkg.json` and use a vcpkg registry/baseline that contains those versions.
+The project has been developed against **Boost 1.92.0** and **OpenSSL 3.6.3#0**. If the manifest uses vcpkg version overrides (for example `1.92.0#0`), keep them in `vcpkg.json` and use a vcpkg registry/baseline that contains those versions.
 
 ## Build with Visual Studio
 
 1. Clone or download the repository.
 2. Set up vcpkg if it is not installed already:
 
-   ```git bash:
+   ```bash:
    cd C:/
    git clone https://github.com/microsoft/vcpkg.git
    cd vcpkg
@@ -54,16 +54,16 @@ Create a configuration JSON file containing the API URL and API key:
   "api_key": "YOUR_API_KEY"
 }
 ```
+The default name for the config file is "config.json". Alternatively, it is also possible to pass the path to the config file as a parameter to the application, for example:
+```bash
+Client.exe "C:\Configs\client.json"
+```
 
 ## Run
 
 1. In Visual Studio, select the console application as the **Startup Project**.
 2. Start with **Debug → Start Without Debugging** (`Ctrl+F5`), or run the built `.exe` from a terminal.
-3. At the prompt, enter the config file path. Press **Enter** to use `config.json` in the application's **working directory**:
-
-   ```text
-   Config path [config.json]: C:\Configs\client.json
-   ```
+3. At the prompt, enter the config file path. Press **Enter** to use `config.json` in the application's **working directory**.
 
 4. Use the console menu:
 
