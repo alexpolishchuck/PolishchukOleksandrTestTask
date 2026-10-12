@@ -1,6 +1,7 @@
 #pragma once
-#include "ConfigReader.h"
 #include "Consts.h"
+#include "NetworkUtils.h"
+#include "ConfigReader.h"
 
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
@@ -14,11 +15,13 @@ namespace beast = boost::beast;
 namespace http = boost::beast::http;
 using tcp = net::ip::tcp;
 
+class Logger;
+
 enum class ImageUploadedParamT
 {
-    All,
-    Uploaded,
-    NotUploaded
+    All = 0,
+    Uploaded = 1,
+    NotUploaded = 2
 };
 
 class HttpsClient
@@ -26,7 +29,8 @@ class HttpsClient
 public:
     HttpsClient(
         Config config,
-        net::io_context& io);
+        net::io_context* io,
+        Logger* logger);
 
     net::awaitable<int> create_event(
         std::string filename,
@@ -34,7 +38,7 @@ public:
 
     net::awaitable<void> upload_image(
         uint32_t event_id,
-        std::wstring filepath);
+        const std::string& filepath);
 
     net::awaitable<std::string> list_events(
         int limit = 20,
@@ -46,30 +50,10 @@ public:
     net::awaitable<void> Stop();
 
 private:
-    net::awaitable<void> Connect();
+    net::awaitable<void> connect();
+    void close_connection();
 
     // Helpers
-    template<typename request_body_t>
-    http::request<request_body_t> create_basic_request(
-        std::string sub_url,
-        http::verb verb)
-    {
-        http::request<request_body_t> request
-        {
-            verb,
-            sub_url,
-            11
-        };
-
-        request.set(http::field::host, m_host);
-        request.set(http::field::accept, "application/json");
-        request.set(http::field::user_agent, "MyAgent/1.0");
-        request.set("X-API-Key", m_config.m_api_key);
-        request.keep_alive(true);
-
-        return request;
-    }
-
     http::request<http::string_body> create_post_request(
         std::string sub_url,
         std::string content_type,
@@ -79,59 +63,83 @@ private:
     net::awaitable<http::response<http::string_body>> send_request(
         http::request<request_body_t> request)
     {
-        auto& tcp_stream = beast::get_lowest_layer(m_stream);
+        co_await connect();
+        auto& tcp_stream = beast::get_lowest_layer(*m_stream);
+        tcp_stream.expires_after(REQUEST_TIMEOUT);
 
+        co_await http::async_write(
+            *m_stream, request, net::use_awaitable);
+
+        tcp_stream.expires_after(REQUEST_TIMEOUT);
+
+        beast::flat_buffer buffer;
         http::response_parser<http::string_body> parser;
         parser.body_limit(MAX_RESPONSE_SIZE);
-        try
+        co_await http::async_read(
+            *m_stream, buffer, parser, net::use_awaitable);
+
+        tcp_stream.expires_never();
+        co_return parser.release();
+    }
+
+    template<typename request_body_t>
+    net::awaitable<http::response<http::string_body>> send_request_with_attempts(
+        http::request<request_body_t> request)
+    {
+        http::response<http::string_body> response;
+        net::steady_timer timer(co_await net::this_coro::executor);
+        const int max_attempts = 3;
+        for (int attempt = 0; attempt < max_attempts; ++attempt)
         {
-            tcp_stream.expires_after(REQUEST_TIMEOUT);
+            try
+            {
+                response = co_await send_request(request);
+            }
+            catch (const boost::system::system_error& ex)
+            {
+                close_connection();
+                if (is_retryable_network_error(ex.code()) && attempt < max_attempts - 1)
+                {
+                    continue;
+                }
 
-            co_await http::async_write(
-                m_stream, request, net::use_awaitable);
+                throw;
+            }
+            catch (const std::exception&)
+            {
+                close_connection();
+                throw;
+            }
 
-            tcp_stream.expires_after(REQUEST_TIMEOUT);
+            if (!response.keep_alive())
+            {
+                close_connection();
+                co_return response;
+            }
 
-            beast::flat_buffer buffer;
-            co_await http::async_read(
-                m_stream, buffer, parser, net::use_awaitable);
+            if (response.result() != http::status::too_many_requests)
+            {
+                break;
+            }
 
-            tcp_stream.expires_never();
+            co_await wait_rate_limit(response, timer, m_logger);
         }
-        catch (std::exception&)
-        {
-            m_connected = false;
-
-            beast::error_code ec;
-            tcp_stream.socket().close(ec);
-
-            throw;
-        }
-
-        auto response = parser.release();
-        if (!response.keep_alive())
-        {
-            m_connected = false;
-
-            beast::error_code ec;
-            tcp_stream.socket().close(ec);
-        }
-
+            
         co_return response;
     }
 
 private:
     Config m_config;
-
+    net::io_context* m_io;
+    tcp::resolver m_resolver;
+    ssl::context m_ssl_context;
+    std::optional<beast::ssl_stream<beast::tcp_stream>> m_stream;
     std::string m_host;
     std::string m_port;
-
-    ssl::context m_ssl_context;
-    tcp::resolver m_resolver;
-    beast::ssl_stream<beast::tcp_stream> m_stream;
+    std::string m_api;
+    Logger* m_logger;
 
     bool m_connected = false;
     bool m_request_in_progress = false;
     bool m_stopping = false;
 };
-

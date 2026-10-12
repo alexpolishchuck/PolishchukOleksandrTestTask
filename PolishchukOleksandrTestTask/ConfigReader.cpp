@@ -1,17 +1,13 @@
 #include "pch.h"
 #include "ConfigReader.h"
 
-ConfigReader::ConfigReader(std::string file_path)
-    : m_file_path(std::move(file_path))
-{}
-
-Config ConfigReader::Read() const
+Config read_config(const std::string& file_path)
 {
     constexpr std::size_t MAX_CONFIG_SIZE = 64 * 1024;
 
-    std::ifstream file(m_file_path, std::ios::binary);
+    std::ifstream file(file_path, std::ios::binary);
     if (!file)
-        throw std::runtime_error("Cannot open config file: " + m_file_path);
+        throw std::runtime_error("Cannot open config file: " + file_path);
 
     std::string content(MAX_CONFIG_SIZE, '\0');
     file.read(content.data(), content.size());
