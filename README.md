@@ -50,7 +50,7 @@ Create a configuration JSON file containing the API URL and API key:
 
 ```json
 {
-  "url": "https://example.com",
+  "url": "https://example.com/api/v4",
   "api_key": "YOUR_API_KEY"
 }
 ```
